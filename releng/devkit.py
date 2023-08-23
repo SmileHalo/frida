@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+import os
 import argparse
 from collections import OrderedDict
 from glob import glob
@@ -121,6 +121,18 @@ def generate_gir(host, kit, flavor, output_dir):
     return [gir_name]
 
 
+def is_relative_to(path, base):
+    # Normalize the paths to ensure a correct comparison
+    path = os.path.normpath(path)
+    base = os.path.normpath(base)
+
+    # Use os.path.commonprefix to find the common prefix between the two paths
+    common_prefix = os.path.commonprefix([path, base])
+
+    # If the common prefix is equal to the base path, then path is relative to base
+    return common_prefix == base
+
+
 def generate_header(package, host, kit, flavor, meson_config, umbrella_header_path, thirdparty_symbol_mappings):
     if platform.system() == "Windows":
         (win_sdk_dir, win_sdk_version) = winenv.get_windows_sdk()
@@ -162,7 +174,8 @@ def generate_header(package, host, kit, flavor, meson_config, umbrella_header_pa
             check=True).stdout
         header_lines = header_dependencies.strip().split("\n")[1:]
         header_files = [Path(line.rstrip("\\").strip()) for line in header_lines]
-        header_files = [h for h in header_files if h.is_relative_to(FRIDA_ROOT)]
+        
+        header_files = [h for h in header_files if is_relative_to(h, FRIDA_ROOT)]
 
     devkit_header_lines = []
     umbrella_header = header_files[0]
@@ -583,7 +596,7 @@ def load_meson_config(host, flavor):
     path = query_machine_file_path(host, flavor)
     if path is None:
         return None
-
+    
     return machine_file.load(path)
 
 
